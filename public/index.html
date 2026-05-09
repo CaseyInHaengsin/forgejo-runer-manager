@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forgejo Runner Manager</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Forgejo Runner Manager</h1>
+        <p>Self-hosted runner container control for Unraid</p>
+      </div>
+      <button id="refresh">Refresh</button>
+    </header>
+
+    <main>
+      <section class="warning">
+        <strong>Security warning:</strong> Docker socket access is equivalent to root access on the host.
+        Keep this app private, require strong credentials, and do not expose it directly to the internet.
+      </section>
+
+      <section class="grid two">
+        <form id="config-form" class="panel">
+          <h2>Forgejo Instance</h2>
+          <label>
+            Instance URL
+            <input id="forgejo-url" name="forgejoUrl" type="url" placeholder="https://git.example.com" required />
+          </label>
+          <button type="submit">Save URL</button>
+        </form>
+
+        <form id="token-form" class="panel">
+          <h2>Registration Tokens</h2>
+          <div class="split">
+            <label>
+              Token name
+              <input name="name" placeholder="admin, org, repo" required />
+            </label>
+            <label>
+              Token
+              <input name="token" type="password" autocomplete="off" required />
+            </label>
+          </div>
+          <button type="submit">Add Token</button>
+          <div id="tokens" class="list"></div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>Create Runner</h2>
+          <select id="template-select">
+            <option value="">Templates</option>
+          </select>
+        </div>
+        <form id="runner-form" class="runner-form">
+          <input type="hidden" name="id" />
+          <label>
+            Runner name
+            <input name="name" placeholder="forgejo-runner-elixir-1" required />
+          </label>
+          <label>
+            Registration token
+            <select name="tokenId" required></select>
+          </label>
+          <label>
+            Runner image
+            <input name="image" value="data.forgejo.org/forgejo/runner:12" required />
+          </label>
+          <label>
+            Docker volume name
+            <input name="volumeName" placeholder="forgejo_runner_elixir_1_data" required />
+          </label>
+          <label>
+            Docker container name
+            <input name="containerName" placeholder="forgejo-runner-elixir-1" required />
+          </label>
+          <label class="wide">
+            Labels
+            <textarea name="labels" rows="4" placeholder="elixir:docker://hexpm/elixir:1.18.4-erlang-28-debian-trixie-slim,node:docker://node:22,ubuntu:docker://ubuntu:24.04" required></textarea>
+          </label>
+          <label class="check">
+            <input name="mountDockerSocket" type="checkbox" />
+            Mount /var/run/docker.sock into runner
+          </label>
+          <label class="check">
+            <input name="runAsRoot" type="checkbox" />
+            Run runner container as user 0:0
+          </label>
+          <div class="actions wide">
+            <button type="submit">Save Runner</button>
+            <button type="button" id="reset-runner" class="secondary">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <h2>Runners</h2>
+        <div id="runners" class="runner-list"></div>
+      </section>
+    </main>
+
+    <dialog id="details-dialog">
+      <article>
+        <header>
+          <h2 id="details-title">Runner</h2>
+          <button id="close-dialog">Close</button>
+        </header>
+        <h3>Docker CLI</h3>
+        <pre id="command-output"></pre>
+        <h3>Logs</h3>
+        <pre id="logs-output"></pre>
+      </article>
+    </dialog>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
