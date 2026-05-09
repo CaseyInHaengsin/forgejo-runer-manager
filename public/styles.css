@@ -52,7 +52,7 @@ h2 {
 
 h3 {
   font-size: 14px;
-  margin: 20px 0 8px;
+  margin: 0 0 6px;
 }
 
 .topbar p,
@@ -156,6 +156,11 @@ button:hover {
   background: var(--accent-strong);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 button.secondary {
   background: #e7edf2;
   color: var(--text);
@@ -190,7 +195,7 @@ button.danger {
 .runner {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px;
+  padding: 14px;
   background: #fbfcfd;
 }
 
@@ -209,13 +214,21 @@ button.danger {
 .runner header {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   margin-bottom: 10px;
 }
 
 .status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  min-height: 24px;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 999px;
-  padding: 3px 9px;
+  padding: 5px 9px;
   background: #dfe8ef;
   color: #26333f;
   font-size: 12px;
@@ -236,19 +249,21 @@ button.danger {
 
 .runner dl {
   display: grid;
-  grid-template-columns: 140px 1fr;
-  gap: 6px 12px;
-  margin: 0 0 12px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 7px 12px;
+  margin: 0 0 14px;
   font-size: 13px;
 }
 
 .runner dt {
   color: var(--muted);
+  font-weight: 650;
 }
 
 .runner dd {
   margin: 0;
   overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .row-actions {
