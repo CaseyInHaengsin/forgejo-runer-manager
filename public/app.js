@@ -43,6 +43,72 @@ function runnerPayload(form) {
   };
 }
 
+function labelsTextarea() {
+  return $("#runner-form textarea[name='labels']");
+}
+
+function parseLabels(value) {
+  return value
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean);
+}
+
+function setLabels(labels) {
+  const deduped = [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
+  labelsTextarea().value = deduped.join(",");
+  renderLabelChips();
+}
+
+function renderLabelChips() {
+  const container = $("#label-chips");
+  const labels = parseLabels(labelsTextarea().value);
+  container.innerHTML = "";
+
+  if (!labels.length) {
+    container.innerHTML = '<span class="muted">No labels added.</span>';
+    return;
+  }
+
+  labels.forEach((label, index) => {
+    const chip = document.createElement("span");
+    chip.className = "label-chip";
+    chip.append(document.createTextNode(label));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "x";
+    remove.onclick = () => {
+      const next = parseLabels(labelsTextarea().value);
+      next.splice(index, 1);
+      setLabels(next);
+    };
+    chip.append(remove);
+    container.append(chip);
+  });
+}
+
+function addLabelFromBuilder() {
+  const name = $("#label-name").value.trim();
+  const type = $("#label-type").value;
+  const value = $("#label-value").value.trim();
+
+  let label = "";
+  if (type === "docker") {
+    if (!name || !value) return;
+    label = `${name}:docker://${value}`;
+  } else if (type === "host") {
+    if (!name) return;
+    label = `${name}:host`;
+  } else {
+    label = value || name;
+  }
+
+  setLabels([...parseLabels(labelsTextarea().value), label]);
+  $("#label-name").value = "";
+  $("#label-value").value = "";
+  $("#label-name").focus();
+}
+
 function renderTokens() {
   const tokenList = $("#tokens");
   const tokenSelect = $("#runner-form select[name='tokenId']");
@@ -199,6 +265,7 @@ function editRunner(runner) {
   form.elements.containerName.value = runner.containerName;
   form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
   form.elements.runAsRoot.checked = runner.runAsRoot;
+  renderLabelChips();
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -213,6 +280,7 @@ function fillFormFromDiscovery(runner) {
   form.elements.containerName.value = runner.containerName;
   form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
   form.elements.runAsRoot.checked = runner.runAsRoot;
+  renderLabelChips();
   if (state.tokens[0]) {
     form.elements.tokenId.value = state.tokens[0].id;
   }
@@ -231,6 +299,7 @@ function clearRunnerForm() {
   form.reset();
   form.elements.id.value = "";
   form.elements.image.value = "data.forgejo.org/forgejo/runner:12";
+  renderLabelChips();
 }
 
 function escapeHtml(value) {
@@ -291,11 +360,20 @@ $("#template-select").addEventListener("change", (event) => {
   form.elements.labels.value = template.labels;
   form.elements.mountDockerSocket.checked = template.mountDockerSocket;
   form.elements.runAsRoot.checked = template.runAsRoot;
+  renderLabelChips();
 });
 
 $("#reset-runner").addEventListener("click", clearRunnerForm);
 $("#refresh").addEventListener("click", load);
 $("#close-dialog").addEventListener("click", () => $("#details-dialog").close());
+$("#add-label").addEventListener("click", addLabelFromBuilder);
+labelsTextarea().addEventListener("input", renderLabelChips);
+$("#label-value").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    addLabelFromBuilder();
+  }
+});
 $("#discover-runners").addEventListener("click", async () => {
   state.discovered = await api("/runners/discover");
   renderDiscovered();
@@ -304,3 +382,5 @@ $("#discover-runners").addEventListener("click", async () => {
 load().catch((error) => {
   document.body.insertAdjacentHTML("afterbegin", `<div class="warning">${escapeHtml(error.message)}</div>`);
 });
+
+renderLabelChips();

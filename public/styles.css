@@ -257,6 +257,50 @@ button.danger {
   gap: 8px;
 }
 
+.label-builder {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+}
+
+.label-fields {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 160px minmax(180px, 1.4fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.label-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 32px;
+}
+
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.label-chip button {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #e7edf2;
+  color: var(--text);
+}
+
 dialog {
   width: min(980px, calc(100vw - 32px));
   border: 1px solid var(--line);
@@ -295,7 +339,8 @@ pre {
 
   .two,
   .split,
-  .runner-form {
+  .runner-form,
+  .label-fields {
     grid-template-columns: 1fr;
   }
 

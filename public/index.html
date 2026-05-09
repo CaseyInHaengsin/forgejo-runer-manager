@@ -81,6 +81,28 @@
             Labels
             <textarea name="labels" rows="4" placeholder="elixir:docker://hexpm/elixir:1.18.4-erlang-28-debian-trixie-slim,node:docker://node:22,ubuntu:docker://ubuntu:24.04" required></textarea>
           </label>
+          <div class="label-builder wide">
+            <div class="label-fields">
+              <label>
+                Label
+                <input id="label-name" placeholder="node" />
+              </label>
+              <label>
+                Type
+                <select id="label-type">
+                  <option value="docker">Docker image</option>
+                  <option value="host">Host</option>
+                  <option value="raw">Raw label</option>
+                </select>
+              </label>
+              <label>
+                Value
+                <input id="label-value" placeholder="node:22" />
+              </label>
+              <button id="add-label" type="button">Add Label</button>
+            </div>
+            <div id="label-chips" class="label-chips"></div>
+          </div>
           <label class="check">
             <input name="mountDockerSocket" type="checkbox" />
             Mount /var/run/docker.sock into runner
