@@ -32,3 +32,17 @@ export interface RunnerWithStatus extends Runner {
   startedAt?: string;
   finishedAt?: string;
 }
+
+export interface DiscoveredRunner {
+  dockerId: string;
+  containerName: string;
+  image: string;
+  status: RunnerStatus;
+  labels: string;
+  volumeName: string;
+  mountDockerSocket: boolean;
+  runAsRoot: boolean;
+  alreadyTracked: boolean;
+  confidence: "high" | "medium" | "low";
+  notes: string[];
+}

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { DEFAULT_RUNNER_IMAGE } from "./config.js";
 import { repo } from "./db.js";
 import {
+  discoverExistingRunners,
   dockerCliCommand,
   listRunnerStatuses,
   recreateRunnerContainer,
@@ -70,6 +71,10 @@ api.delete("/tokens/:id", asyncRoute(async (req, res) => {
 
 api.get("/runners", asyncRoute(async (_req, res) => {
   res.json(await listRunnerStatuses(await repo.listRunners()));
+}));
+
+api.get("/runners/discover", asyncRoute(async (_req, res) => {
+  res.json(await discoverExistingRunners());
 }));
 
 api.post("/runners", asyncRoute(async (req, res) => {

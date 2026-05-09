@@ -1,0 +1,19 @@
+services:
+  forgejo-runner-manager:
+    image: ghcr.io/YOUR_GITHUB_OWNER/YOUR_REPO_NAME:latest
+    container_name: forgejo-runner-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATA_DIR: /app/data
+      APP_USERNAME: admin
+      APP_PASSWORD: change-this-password
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+    volumes:
+      - forgejo_runner_manager_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  forgejo_runner_manager_data:

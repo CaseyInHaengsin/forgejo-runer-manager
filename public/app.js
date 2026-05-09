@@ -2,7 +2,8 @@ const state = {
   config: {},
   tokens: [],
   runners: [],
-  templates: []
+  templates: [],
+  discovered: []
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -124,6 +125,46 @@ function renderRunners() {
   }
 }
 
+function renderDiscovered() {
+  const list = $("#discovered-runners");
+  list.innerHTML = "";
+
+  if (!state.discovered.length) {
+    list.innerHTML = '<p class="muted">No scan results yet.</p>';
+    return;
+  }
+
+  for (const runner of state.discovered) {
+    const row = document.createElement("article");
+    row.className = "runner";
+    row.innerHTML = `
+      <header>
+        <div>
+          <h3>${escapeHtml(runner.containerName)}</h3>
+          <p class="muted">${escapeHtml(runner.image)}</p>
+        </div>
+        <span class="status ${escapeHtml(runner.status)}">${escapeHtml(runner.alreadyTracked ? "tracked" : runner.status)}</span>
+      </header>
+      <dl>
+        <dt>Confidence</dt><dd>${escapeHtml(runner.confidence)}</dd>
+        <dt>Volume</dt><dd>${escapeHtml(runner.volumeName)}</dd>
+        <dt>Labels</dt><dd>${escapeHtml(runner.labels || "not inferred")}</dd>
+        <dt>Docker socket</dt><dd>${runner.mountDockerSocket ? "mounted" : "not mounted"}</dd>
+        <dt>User</dt><dd>${runner.runAsRoot ? "0:0/root" : "image default or unknown"}</dd>
+        <dt>Notes</dt><dd>${escapeHtml(runner.notes.join(" ")) || "No issues detected."}</dd>
+      </dl>
+    `;
+
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    const button = actionButton(runner.alreadyTracked ? "Already tracked" : "Use in form", () => fillFormFromDiscovery(runner), "secondary");
+    button.disabled = runner.alreadyTracked;
+    actions.append(button);
+    row.append(actions);
+    list.append(row);
+  }
+}
+
 function actionButton(label, onClick, className = "") {
   const button = document.createElement("button");
   button.type = "button";
@@ -158,6 +199,23 @@ function editRunner(runner) {
   form.elements.containerName.value = runner.containerName;
   form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
   form.elements.runAsRoot.checked = runner.runAsRoot;
+  form.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function fillFormFromDiscovery(runner) {
+  const form = $("#runner-form");
+  const name = runner.containerName || "forgejo-runner";
+  form.elements.id.value = "";
+  form.elements.name.value = name;
+  form.elements.image.value = runner.image || "data.forgejo.org/forgejo/runner:12";
+  form.elements.labels.value = runner.labels || "";
+  form.elements.volumeName.value = runner.volumeName || `${name}_data`;
+  form.elements.containerName.value = runner.containerName;
+  form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
+  form.elements.runAsRoot.checked = runner.runAsRoot;
+  if (state.tokens[0]) {
+    form.elements.tokenId.value = state.tokens[0].id;
+  }
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -199,6 +257,7 @@ async function load() {
   renderTokens();
   renderTemplates();
   renderRunners();
+  renderDiscovered();
 }
 
 $("#config-form").addEventListener("submit", async (event) => {
@@ -237,6 +296,10 @@ $("#template-select").addEventListener("change", (event) => {
 $("#reset-runner").addEventListener("click", clearRunnerForm);
 $("#refresh").addEventListener("click", load);
 $("#close-dialog").addEventListener("click", () => $("#details-dialog").close());
+$("#discover-runners").addEventListener("click", async () => {
+  state.discovered = await api("/runners/discover");
+  renderDiscovered();
+});
 
 load().catch((error) => {
   document.body.insertAdjacentHTML("afterbegin", `<div class="warning">${escapeHtml(error.message)}</div>`);

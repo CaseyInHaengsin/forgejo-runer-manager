@@ -7,7 +7,8 @@ import {
   RUNNER_ID_LABEL
 } from "./config.js";
 import { repo } from "./db.js";
-import type { Runner, RunnerStatus, RunnerWithStatus } from "./types.js";
+import type Dockerode from "dockerode";
+import type { DiscoveredRunner, Runner, RunnerStatus, RunnerWithStatus } from "./types.js";
 
 const docker = new Docker({ socketPath: DOCKER_SOCKET_PATH });
 
@@ -82,7 +83,16 @@ async function findContainer(runner: Runner) {
       label: [`${RUNNER_ID_LABEL}=${runner.id}`]
     }
   });
-  return containers[0];
+  if (containers[0]) return containers[0];
+
+  const byName = await docker.listContainers({
+    all: true,
+    filters: {
+      name: [runner.containerName]
+    }
+  });
+
+  return byName.find((container) => container.Names.some((name) => name === `/${runner.containerName}`));
 }
 
 function statusFromDocker(state?: string): RunnerStatus {
@@ -113,6 +123,88 @@ export async function runnerStatus(runner: Runner): Promise<RunnerWithStatus> {
 
 export async function listRunnerStatuses(runners: Runner[]) {
   return Promise.all(runners.map(runnerStatus));
+}
+
+function looksLikeForgejoRunner(container: Dockerode.ContainerInfo) {
+  const haystack = [
+    container.Image,
+    container.Command,
+    ...container.Names,
+    ...Object.entries(container.Labels ?? {}).map(([key, value]) => `${key}=${value}`)
+  ].join(" ").toLowerCase();
+
+  return haystack.includes("forgejo") && haystack.includes("runner");
+}
+
+function inferLabels(inspect: Dockerode.ContainerInspectInfo) {
+  const env = inspect.Config.Env ?? [];
+  const envLabels = env.find((value) => value.startsWith("RUNNER_LABELS="))?.slice("RUNNER_LABELS=".length);
+  if (envLabels) return envLabels;
+
+  const command = [...(inspect.Config.Cmd ?? []), ...(inspect.Args ?? [])].join(" ");
+  const flagMatch = command.match(/--labels(?:=|\s+)(['"]?)([^'"\s]+)\1/);
+  if (flagMatch?.[2]) return flagMatch[2];
+
+  return "";
+}
+
+function inferVolumeName(inspect: Dockerode.ContainerInspectInfo) {
+  const dataMount = inspect.Mounts?.find((mount) => mount.Destination === "/data");
+  return dataMount?.Name || dataMount?.Source || `${inspect.Name.replace(/^\//, "")}_data`;
+}
+
+function inferDockerSocket(inspect: Dockerode.ContainerInspectInfo) {
+  return Boolean(inspect.Mounts?.some((mount) => mount.Destination === "/var/run/docker.sock" || mount.Source === DOCKER_SOCKET_PATH));
+}
+
+function inferRunAsRoot(inspect: Dockerode.ContainerInspectInfo) {
+  const user = inspect.Config.User || "";
+  return user === "0" || user === "0:0" || user === "root";
+}
+
+export async function discoverExistingRunners(): Promise<DiscoveredRunner[]> {
+  const [containers, tracked] = await Promise.all([
+    docker.listContainers({ all: true }),
+    repo.listRunners()
+  ]);
+  const trackedNames = new Set(tracked.map((runner) => runner.containerName));
+  const trackedDockerIds = new Set((await listRunnerStatuses(tracked)).map((runner) => runner.dockerId).filter(Boolean));
+  const candidates = containers.filter(looksLikeForgejoRunner);
+
+  const discovered = await Promise.all(candidates.map(async (container): Promise<DiscoveredRunner> => {
+    const inspect = await docker.getContainer(container.Id).inspect();
+    const containerName = inspect.Name.replace(/^\//, "");
+    const labels = inferLabels(inspect);
+    const volumeName = inferVolumeName(inspect);
+    const notes = [];
+
+    if (!labels) notes.push("Labels could not be inferred; review before adopting.");
+    if (!inspect.Mounts?.some((mount) => mount.Destination === "/data")) notes.push("No /data mount found; preserving registration may require manual review.");
+    if (volumeName.startsWith("/")) notes.push("/data appears to be a bind mount, not a named Docker volume.");
+    if (!inspect.Config.Labels?.[RUNNER_ID_LABEL]) notes.push("Container does not have this app's management labels; operations will fall back to container name.");
+
+    const confidence = labels && inspect.Mounts?.some((mount) => mount.Destination === "/data")
+      ? "high"
+      : labels || inspect.Mounts?.some((mount) => mount.Destination === "/data")
+        ? "medium"
+        : "low";
+
+    return {
+      dockerId: container.Id,
+      containerName,
+      image: inspect.Config.Image || container.Image,
+      status: statusFromDocker(inspect.State.Status),
+      labels,
+      volumeName,
+      mountDockerSocket: inferDockerSocket(inspect),
+      runAsRoot: inferRunAsRoot(inspect),
+      alreadyTracked: trackedNames.has(containerName) || trackedDockerIds.has(container.Id),
+      confidence,
+      notes
+    };
+  }));
+
+  return discovered.sort((left, right) => Number(left.alreadyTracked) - Number(right.alreadyTracked));
 }
 
 export async function ensureImage(image: string) {

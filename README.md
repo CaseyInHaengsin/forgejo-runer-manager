@@ -61,6 +61,30 @@ ghcr.io/<github-owner>/<repo-name>:latest
 
 Set the Web UI port to `3000`, persist `/app/data`, and mount `/var/run/docker.sock`.
 
+Portainer stack example:
+
+```yaml
+services:
+  forgejo-runner-manager:
+    image: ghcr.io/<github-owner>/<repo-name>:latest
+    container_name: forgejo-runner-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DATA_DIR: /app/data
+      APP_USERNAME: admin
+      APP_PASSWORD: change-this-password
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+    volumes:
+      - forgejo_runner_manager_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  forgejo_runner_manager_data:
+```
+
 ### Option B: Build on the server
 
 1. Copy this directory to your Unraid appdata or a persistent share.
