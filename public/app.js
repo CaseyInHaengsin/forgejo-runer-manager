@@ -54,6 +54,34 @@ function parseLabels(value) {
     .filter(Boolean);
 }
 
+function labelName(label) {
+  return label.split(":")[0]?.trim();
+}
+
+function renderKnownLabels() {
+  const known = new Set(["ubuntu", "ubuntu-latest", "node", "elixir", "deploy"]);
+  for (const template of state.templates) {
+    parseLabels(template.labels).forEach((label) => {
+      const name = labelName(label);
+      if (name) known.add(name);
+    });
+  }
+  for (const runner of state.runners) {
+    parseLabels(runner.labels).forEach((label) => {
+      const name = labelName(label);
+      if (name) known.add(name);
+    });
+  }
+
+  const datalist = $("#known-labels");
+  datalist.innerHTML = "";
+  [...known].sort().forEach((name) => {
+    const option = document.createElement("option");
+    option.value = name;
+    datalist.append(option);
+  });
+}
+
 function setLabels(labels) {
   const deduped = [...new Set(labels.map((label) => label.trim()).filter(Boolean))];
   labelsTextarea().value = deduped.join(",");
@@ -371,6 +399,7 @@ async function load() {
   renderTemplates();
   renderRunners();
   renderDiscovered();
+  renderKnownLabels();
 }
 
 $("#config-form").addEventListener("submit", async (event) => {
