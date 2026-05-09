@@ -246,7 +246,9 @@ export async function startRunner(runner: Runner) {
     container = await findContainer(runner);
   }
   if (!container) throw new Error("Unable to create runner container.");
-  await docker.getContainer(container.Id).start();
+  await docker.getContainer(container.Id).start().catch((error: any) => {
+    if (error.statusCode !== 304) throw error;
+  });
 }
 
 export async function stopRunner(runner: Runner) {
