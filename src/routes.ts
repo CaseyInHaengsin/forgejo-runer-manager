@@ -48,7 +48,7 @@ api.get("/config", asyncRoute(async (_req, res) => {
 
 api.put("/config", asyncRoute(async (req, res) => {
   const input = configSchema.parse(req.body);
-  res.json(await repo.updateConfig(input.forgejoUrl));
+  res.json(await repo.updateConfig(input.forgejoUrl.trim()));
 }));
 
 api.get("/tokens", asyncRoute(async (_req, res) => {
@@ -61,7 +61,7 @@ api.get("/tokens", asyncRoute(async (_req, res) => {
 
 api.post("/tokens", asyncRoute(async (req, res) => {
   const input = tokenSchema.parse(req.body);
-  res.status(201).json(await repo.createToken(input.name, input.token));
+  res.status(201).json(await repo.createToken(input.name.trim(), input.token.trim()));
 }));
 
 api.delete("/tokens/:id", asyncRoute(async (req, res) => {

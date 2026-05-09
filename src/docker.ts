@@ -292,13 +292,37 @@ export async function recreateRunnerContainer(runner: Runner) {
 export async function runnerLogs(runner: Runner, tail = 300) {
   const container = await findContainer(runner);
   if (!container) return "";
-  const stream = await docker.getContainer(container.Id).logs({
+  const buffer = await docker.getContainer(container.Id).logs({
     stdout: true,
     stderr: true,
     timestamps: true,
     tail
   });
-  return stream.toString("utf8").replaceAll(/\u0001|\u0002|\u0003|\u0000/g, "");
+  return decodeDockerLogBuffer(buffer);
+}
+
+function decodeDockerLogBuffer(buffer: Buffer) {
+  const chunks: Buffer[] = [];
+  let offset = 0;
+
+  while (offset + 8 <= buffer.length) {
+    const streamType = buffer[offset];
+    const size = buffer.readUInt32BE(offset + 4);
+    const nextOffset = offset + 8 + size;
+
+    if ((streamType === 1 || streamType === 2) && size >= 0 && nextOffset <= buffer.length) {
+      chunks.push(buffer.subarray(offset + 8, nextOffset));
+      offset = nextOffset;
+    } else {
+      return buffer.toString("utf8");
+    }
+  }
+
+  if (offset < buffer.length) {
+    chunks.push(buffer.subarray(offset));
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 export async function dockerCliCommand(runner: Runner, redactToken = true) {
