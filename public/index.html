@@ -120,6 +120,35 @@
 
       <section class="panel">
         <div class="section-head">
+          <h2>Runner Templates</h2>
+          <button id="template-from-form" type="button" class="secondary">Use Current Labels</button>
+        </div>
+        <form id="template-form" class="runner-form">
+          <label>
+            Template name
+            <input name="name" placeholder="Elixir deploy runner" required />
+          </label>
+          <label class="wide">
+            Template labels
+            <textarea name="labels" rows="3" placeholder="deploy:host,node:docker://node:22" required></textarea>
+          </label>
+          <label class="check">
+            <input name="mountDockerSocket" type="checkbox" />
+            Mount /var/run/docker.sock
+          </label>
+          <label class="check">
+            <input name="runAsRoot" type="checkbox" />
+            Run as user 0:0
+          </label>
+          <div class="actions wide">
+            <button type="submit">Create Template</button>
+          </div>
+        </form>
+        <div id="templates" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
           <h2>Discover Existing Runners</h2>
           <button id="discover-runners" type="button" class="secondary">Scan Docker</button>
         </div>

@@ -4,8 +4,8 @@ import { desc, eq, sql } from "drizzle-orm";
 import { drizzle, type AsyncRemoteCallback } from "drizzle-orm/sqlite-proxy";
 import { nanoid } from "nanoid";
 import { DATA_DIR, DB_PATH, DEFAULT_RUNNER_IMAGE } from "./config.js";
-import type { AppConfig, RegistrationToken, Runner } from "./types.js";
-import { appConfig, registrationTokens, runners } from "./schema.js";
+import type { AppConfig, RegistrationToken, Runner, RunnerTemplate } from "./types.js";
+import { appConfig, registrationTokens, runners, runnerTemplates } from "./schema.js";
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -26,7 +26,7 @@ const execute: AsyncRemoteCallback = async (query, params, method) => {
   return { rows: statement.all(...params) as unknown as any[] };
 };
 
-export const db = drizzle(execute, { schema: { appConfig, registrationTokens, runners } });
+export const db = drizzle(execute, { schema: { appConfig, registrationTokens, runners, runnerTemplates } });
 sqlite.exec("pragma journal_mode = WAL");
 sqlite.exec("pragma foreign_keys = ON");
 
@@ -58,7 +58,55 @@ sqlite.exec(`
     created_at text not null default current_timestamp,
     updated_at text not null default current_timestamp
   );
+
+  create table if not exists runner_templates (
+    id text primary key,
+    name text not null,
+    labels text not null,
+    mount_docker_socket integer not null default 0,
+    run_as_root integer not null default 0,
+    created_at text not null default current_timestamp,
+    updated_at text not null default current_timestamp
+  );
 `);
+
+const defaultTemplates = [
+  {
+    id: "default-elixir-node-ubuntu",
+    name: "Elixir + Node + Ubuntu",
+    labels: "elixir:docker://hexpm/elixir:1.18.4-erlang-28-debian-trixie-slim,node:docker://node:22,ubuntu:docker://ubuntu:24.04",
+    mountDockerSocket: true,
+    runAsRoot: true
+  },
+  {
+    id: "default-node",
+    name: "Node",
+    labels: "node:docker://node:22,ubuntu:docker://ubuntu:24.04",
+    mountDockerSocket: false,
+    runAsRoot: false
+  },
+  {
+    id: "default-ubuntu",
+    name: "Ubuntu",
+    labels: "ubuntu:docker://ubuntu:24.04,ubuntu-latest:docker://ubuntu:24.04",
+    mountDockerSocket: false,
+    runAsRoot: false
+  },
+  {
+    id: "default-deploy-only",
+    name: "Deploy only",
+    labels: "deploy:host",
+    mountDockerSocket: false,
+    runAsRoot: false
+  }
+];
+
+for (const template of defaultTemplates) {
+  sqlite.prepare(`
+    insert or ignore into runner_templates (id, name, labels, mount_docker_socket, run_as_root)
+    values (?, ?, ?, ?, ?)
+  `).run(template.id, template.name, template.labels, template.mountDockerSocket ? 1 : 0, template.runAsRoot ? 1 : 0);
+}
 
 export const repo = {
   async getConfig(): Promise<AppConfig> {
@@ -86,6 +134,24 @@ export const repo = {
 
   async deleteToken(id: string) {
     await db.delete(registrationTokens).where(eq(registrationTokens.id, id)).run();
+  },
+
+  async listTemplates(): Promise<RunnerTemplate[]> {
+    return await db.select().from(runnerTemplates).orderBy(desc(runnerTemplates.createdAt)).all();
+  },
+
+  async getTemplate(id: string): Promise<RunnerTemplate | undefined> {
+    return await db.select().from(runnerTemplates).where(eq(runnerTemplates.id, id)).get();
+  },
+
+  async createTemplate(input: Omit<RunnerTemplate, "id" | "createdAt" | "updatedAt">): Promise<RunnerTemplate> {
+    const id = nanoid();
+    await db.insert(runnerTemplates).values({ id, ...input }).run();
+    return (await this.getTemplate(id))!;
+  },
+
+  async deleteTemplate(id: string) {
+    await db.delete(runnerTemplates).where(eq(runnerTemplates.id, id)).run();
   },
 
   async listRunners(): Promise<Runner[]> {

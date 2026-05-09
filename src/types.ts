@@ -11,6 +11,16 @@ export interface RegistrationToken {
   createdAt: string;
 }
 
+export interface RunnerTemplate {
+  id: string;
+  name: string;
+  labels: string;
+  mountDockerSocket: boolean;
+  runAsRoot: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Runner {
   id: string;
   name: string;

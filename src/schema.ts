@@ -28,3 +28,13 @@ export const runners = sqliteTable("runners", {
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 });
+
+export const runnerTemplates = sqliteTable("runner_templates", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  labels: text("labels").notNull(),
+  mountDockerSocket: integer("mount_docker_socket", { mode: "boolean" }).notNull().default(false),
+  runAsRoot: integer("run_as_root", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+});

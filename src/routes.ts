@@ -38,6 +38,13 @@ const runnerSchema = z.object({
   runAsRoot: z.boolean().default(false)
 });
 
+const templateSchema = z.object({
+  name: z.string().min(1),
+  labels: z.string().min(1),
+  mountDockerSocket: z.boolean().default(false),
+  runAsRoot: z.boolean().default(false)
+});
+
 function asyncRoute(handler: (req: Request, res: Response, next: NextFunction) => Promise<unknown>) {
   return (req: Request, res: Response, next: NextFunction) => Promise.resolve(handler(req, res, next)).catch(next);
 }
@@ -155,31 +162,21 @@ api.get("/runners/:id/command", asyncRoute(async (req, res) => {
   res.type("text/plain").send(await dockerCliCommand(runner));
 }));
 
-api.get("/templates", (_req, res) => {
-  res.json([
-    {
-      name: "Elixir + Node + Ubuntu",
-      labels: "elixir:docker://hexpm/elixir:1.18.4-erlang-28-debian-trixie-slim,node:docker://node:22,ubuntu:docker://ubuntu:24.04",
-      mountDockerSocket: true,
-      runAsRoot: true
-    },
-    {
-      name: "Node",
-      labels: "node:docker://node:22,ubuntu:docker://ubuntu:24.04",
-      mountDockerSocket: false,
-      runAsRoot: false
-    },
-    {
-      name: "Ubuntu",
-      labels: "ubuntu:docker://ubuntu:24.04,ubuntu-latest:docker://ubuntu:24.04",
-      mountDockerSocket: false,
-      runAsRoot: false
-    },
-    {
-      name: "Deploy only",
-      labels: "deploy:host",
-      mountDockerSocket: false,
-      runAsRoot: false
-    }
-  ]);
-});
+api.get("/templates", asyncRoute(async (_req, res) => {
+  res.json(await repo.listTemplates());
+}));
+
+api.post("/templates", asyncRoute(async (req, res) => {
+  const input = templateSchema.parse(req.body);
+  res.status(201).json(await repo.createTemplate({
+    name: input.name.trim(),
+    labels: input.labels.trim(),
+    mountDockerSocket: input.mountDockerSocket,
+    runAsRoot: input.runAsRoot
+  }));
+}));
+
+api.delete("/templates/:id", asyncRoute(async (req, res) => {
+  await repo.deleteTemplate(req.params.id);
+  res.status(204).end();
+}));

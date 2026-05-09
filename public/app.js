@@ -139,13 +139,40 @@ function renderTokens() {
 
 function renderTemplates() {
   const select = $("#template-select");
+  const list = $("#templates");
   select.innerHTML = '<option value="">Templates</option>';
-  state.templates.forEach((template, index) => {
+  list.innerHTML = "";
+
+  state.templates.forEach((template) => {
     const option = document.createElement("option");
-    option.value = String(index);
+    option.value = template.id;
     option.textContent = template.name;
     select.append(option);
+
+    const row = document.createElement("div");
+    row.className = "token";
+    row.innerHTML = `
+      <div>
+        <strong>${escapeHtml(template.name)}</strong>
+        <div class="muted">${escapeHtml(template.labels)}</div>
+      </div>
+    `;
+    const actions = document.createElement("div");
+    actions.className = "row-actions";
+    actions.append(
+      actionButton("Apply", () => applyTemplate(template), "secondary"),
+      actionButton("Delete", async () => {
+        await api(`/templates/${template.id}`, { method: "DELETE" });
+        await load();
+      }, "danger")
+    );
+    row.append(actions);
+    list.append(row);
   });
+
+  if (!state.templates.length) {
+    list.innerHTML = '<p class="muted">No templates yet.</p>';
+  }
 }
 
 function renderRunners() {
@@ -287,6 +314,23 @@ function fillFormFromDiscovery(runner) {
   form.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+function applyTemplate(template) {
+  const form = $("#runner-form");
+  form.elements.labels.value = template.labels;
+  form.elements.mountDockerSocket.checked = template.mountDockerSocket;
+  form.elements.runAsRoot.checked = template.runAsRoot;
+  renderLabelChips();
+}
+
+function templatePayload(form) {
+  return {
+    name: form.elements.name.value.trim(),
+    labels: form.elements.labels.value.trim(),
+    mountDockerSocket: form.elements.mountDockerSocket.checked,
+    runAsRoot: form.elements.runAsRoot.checked
+  };
+}
+
 async function deleteRunner(runner) {
   if (!confirm(`Delete ${runner.name}? This removes the app record and managed container.`)) return;
   const removeVolume = confirm("Also remove the runner Docker volume? Keeping it preserves registration data for manual recovery.");
@@ -354,13 +398,27 @@ $("#runner-form").addEventListener("submit", async (event) => {
 });
 
 $("#template-select").addEventListener("change", (event) => {
-  const template = state.templates[Number(event.currentTarget.value)];
+  const template = state.templates.find((item) => item.id === event.currentTarget.value);
   if (!template) return;
-  const form = $("#runner-form");
-  form.elements.labels.value = template.labels;
-  form.elements.mountDockerSocket.checked = template.mountDockerSocket;
-  form.elements.runAsRoot.checked = template.runAsRoot;
-  renderLabelChips();
+  applyTemplate(template);
+});
+
+$("#template-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await api("/templates", {
+    method: "POST",
+    body: JSON.stringify(templatePayload(event.currentTarget))
+  });
+  event.currentTarget.reset();
+  await load();
+});
+
+$("#template-from-form").addEventListener("click", () => {
+  const runnerForm = $("#runner-form");
+  const templateForm = $("#template-form");
+  templateForm.elements.labels.value = runnerForm.elements.labels.value;
+  templateForm.elements.mountDockerSocket.checked = runnerForm.elements.mountDockerSocket.checked;
+  templateForm.elements.runAsRoot.checked = runnerForm.elements.runAsRoot.checked;
 });
 
 $("#reset-runner").addEventListener("click", clearRunnerForm);
