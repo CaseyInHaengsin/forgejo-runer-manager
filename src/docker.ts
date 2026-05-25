@@ -23,6 +23,13 @@ function labelsArray(labels: string) {
     .filter(Boolean);
 }
 
+function dnsArray(dnsServers: string) {
+  return dnsServers
+    .split(/[,\n]/)
+    .map((server) => server.trim())
+    .filter(Boolean);
+}
+
 function configYaml(labels: string) {
   const yamlLabels = labelsArray(labels).map((label) => `    - ${JSON.stringify(label)}`).join("\n");
   return `log:\n  level: info\nrunner:\n  labels:\n${yamlLabels || "    []"}\ncontainer:\n  docker_host: automount\n`;
@@ -71,6 +78,7 @@ function containerOptions(runner: Runner, token: string, forgejoUrl: string) {
     Cmd: ["/bin/sh", "-c", startupScript(runner, token, forgejoUrl)],
     HostConfig: {
       Binds: binds,
+      Dns: dnsArray(runner.dnsServers),
       RestartPolicy: { Name: "unless-stopped" as const }
     }
   };
@@ -157,6 +165,10 @@ function inferDockerSocket(inspect: Dockerode.ContainerInspectInfo) {
   return Boolean(inspect.Mounts?.some((mount) => mount.Destination === "/var/run/docker.sock" || mount.Source === DOCKER_SOCKET_PATH));
 }
 
+function inferDnsServers(inspect: Dockerode.ContainerInspectInfo) {
+  return (inspect.HostConfig.Dns ?? []).join(",");
+}
+
 function inferRunAsRoot(inspect: Dockerode.ContainerInspectInfo) {
   const user = inspect.Config.User || "";
   return user === "0" || user === "0:0" || user === "root";
@@ -196,6 +208,7 @@ export async function discoverExistingRunners(): Promise<DiscoveredRunner[]> {
       status: statusFromDocker(inspect.State.Status),
       labels,
       volumeName,
+      dnsServers: inferDnsServers(inspect),
       mountDockerSocket: inferDockerSocket(inspect),
       runAsRoot: inferRunAsRoot(inspect),
       alreadyTracked: trackedNames.has(containerName) || trackedDockerIds.has(container.Id),
@@ -334,6 +347,7 @@ export async function dockerCliCommand(runner: Runner, redactToken = true) {
     binds.push(`-v ${shellQuote(`${DOCKER_SOCKET_PATH}:/var/run/docker.sock`)}`);
   }
   const user = runner.runAsRoot ? " --user 0:0" : "";
+  const dns = dnsArray(runner.dnsServers).map((server) => `--dns ${shellQuote(server)}`).join(" ");
   const env = [
     `-e FORGEJO_INSTANCE_URL=${shellQuote(config.forgejoUrl || "<forgejo-url>")}`,
     `-e RUNNER_NAME=${shellQuote(runner.name)}`,
@@ -343,6 +357,6 @@ export async function dockerCliCommand(runner: Runner, redactToken = true) {
   const command = startupScript(runner, tokenValue, config.forgejoUrl || "<forgejo-url>");
   return [
     `docker volume create ${shellQuote(runner.volumeName)}`,
-    `docker run -d --name ${shellQuote(runner.containerName)} --restart unless-stopped${user} ${binds.join(" ")} ${env} ${shellQuote(runner.image)} /bin/sh -c ${shellQuote(command)}`
+    `docker run -d --name ${shellQuote(runner.containerName)} --restart unless-stopped${user} ${dns} ${binds.join(" ")} ${env} ${shellQuote(runner.image)} /bin/sh -c ${shellQuote(command)}`
   ].join("\n");
 }

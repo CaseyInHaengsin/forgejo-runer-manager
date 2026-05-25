@@ -23,6 +23,7 @@ export const runners = sqliteTable("runners", {
   labels: text("labels").notNull(),
   volumeName: text("volume_name").notNull().unique(),
   containerName: text("container_name").notNull().unique(),
+  dnsServers: text("dns_servers").notNull().default(""),
   mountDockerSocket: integer("mount_docker_socket", { mode: "boolean" }).notNull().default(false),
   runAsRoot: integer("run_as_root", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),

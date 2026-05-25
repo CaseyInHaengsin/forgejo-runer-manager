@@ -34,6 +34,7 @@ const runnerSchema = z.object({
   labels: z.string().min(1),
   volumeName: z.string().min(1),
   containerName: z.string().min(1),
+  dnsServers: z.string().default(""),
   mountDockerSocket: z.boolean().default(false),
   runAsRoot: z.boolean().default(false)
 });
@@ -109,6 +110,7 @@ api.put("/runners/:id", asyncRoute(async (req, res) => {
     input.image !== undefined ||
     input.volumeName !== undefined ||
     input.containerName !== undefined ||
+    input.dnsServers !== undefined ||
     input.mountDockerSocket !== undefined ||
     input.runAsRoot !== undefined ||
     input.name !== undefined;

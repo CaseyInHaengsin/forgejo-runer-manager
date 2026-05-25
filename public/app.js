@@ -38,6 +38,7 @@ function runnerPayload(form) {
     labels: data.labels.trim(),
     volumeName: data.volumeName.trim(),
     containerName: data.containerName.trim(),
+    dnsServers: (data.dnsServers || "").trim(),
     mountDockerSocket: form.elements.mountDockerSocket.checked,
     runAsRoot: form.elements.runAsRoot.checked
   };
@@ -227,6 +228,7 @@ function renderRunners() {
         <dt>Image</dt><dd>${escapeHtml(runner.image)}</dd>
         <dt>Volume</dt><dd>${escapeHtml(runner.volumeName)}</dd>
         <dt>Labels</dt><dd>${escapeHtml(runner.labels)}</dd>
+        <dt>DNS</dt><dd>${escapeHtml(runner.dnsServers || "Docker default")}</dd>
         <dt>Docker socket</dt><dd>${runner.mountDockerSocket ? "mounted" : "not mounted"}</dd>
         <dt>User</dt><dd>${runner.runAsRoot ? "0:0" : "image default"}</dd>
       </dl>
@@ -270,6 +272,7 @@ function renderDiscovered() {
         <dt>Confidence</dt><dd>${escapeHtml(runner.confidence)}</dd>
         <dt>Volume</dt><dd>${escapeHtml(runner.volumeName)}</dd>
         <dt>Labels</dt><dd>${escapeHtml(runner.labels || "not inferred")}</dd>
+        <dt>DNS</dt><dd>${escapeHtml(runner.dnsServers || "Docker default")}</dd>
         <dt>Docker socket</dt><dd>${runner.mountDockerSocket ? "mounted" : "not mounted"}</dd>
         <dt>User</dt><dd>${runner.runAsRoot ? "0:0/root" : "image default or unknown"}</dd>
         <dt>Notes</dt><dd>${escapeHtml(runner.notes.join(" ")) || "No issues detected."}</dd>
@@ -318,6 +321,7 @@ function editRunner(runner) {
   form.elements.labels.value = runner.labels;
   form.elements.volumeName.value = runner.volumeName;
   form.elements.containerName.value = runner.containerName;
+  form.elements.dnsServers.value = runner.dnsServers || "";
   form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
   form.elements.runAsRoot.checked = runner.runAsRoot;
   renderLabelChips();
@@ -333,6 +337,7 @@ function fillFormFromDiscovery(runner) {
   form.elements.labels.value = runner.labels || "";
   form.elements.volumeName.value = runner.volumeName || `${name}_data`;
   form.elements.containerName.value = runner.containerName;
+  form.elements.dnsServers.value = runner.dnsServers || "";
   form.elements.mountDockerSocket.checked = runner.mountDockerSocket;
   form.elements.runAsRoot.checked = runner.runAsRoot;
   renderLabelChips();

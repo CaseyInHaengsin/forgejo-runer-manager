@@ -53,6 +53,7 @@ sqlite.exec(`
     labels text not null,
     volume_name text not null unique,
     container_name text not null unique,
+    dns_servers text not null default '',
     mount_docker_socket integer not null default 0,
     run_as_root integer not null default 0,
     created_at text not null default current_timestamp,
@@ -69,6 +70,14 @@ sqlite.exec(`
     updated_at text not null default current_timestamp
   );
 `);
+
+try {
+  sqlite.exec("alter table runners add column dns_servers text not null default ''");
+} catch (error) {
+  if (!(error instanceof Error) || !error.message.includes("duplicate column name")) {
+    throw error;
+  }
+}
 
 const defaultTemplates = [
   {
@@ -172,6 +181,7 @@ export const repo = {
       labels: input.labels,
       volumeName: input.volumeName,
       containerName: input.containerName,
+      dnsServers: input.dnsServers ?? "",
       mountDockerSocket: input.mountDockerSocket,
       runAsRoot: input.runAsRoot
     }).run();
@@ -190,6 +200,7 @@ export const repo = {
         labels: next.labels,
         volumeName: next.volumeName,
         containerName: next.containerName,
+        dnsServers: next.dnsServers,
         mountDockerSocket: next.mountDockerSocket,
         runAsRoot: next.runAsRoot,
         updatedAt: sql`CURRENT_TIMESTAMP`

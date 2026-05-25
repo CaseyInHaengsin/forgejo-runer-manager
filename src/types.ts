@@ -29,6 +29,7 @@ export interface Runner {
   labels: string;
   volumeName: string;
   containerName: string;
+  dnsServers: string;
   mountDockerSocket: boolean;
   runAsRoot: boolean;
   createdAt: string;
@@ -50,6 +51,7 @@ export interface DiscoveredRunner {
   status: RunnerStatus;
   labels: string;
   volumeName: string;
+  dnsServers: string;
   mountDockerSocket: boolean;
   runAsRoot: boolean;
   alreadyTracked: boolean;
